@@ -3,8 +3,10 @@ from textual.screen import Screen
 from textual.widgets import Header, Footer, Button, Input, Static, ProgressBar, RichLog, DataTable
 from textual.containers import Vertical, Horizontal
 from textual import work
+from rich.text import Text
+import subprocess
 from models import Package, Risk
-from scanner import parse_deps, check_pypi, looks_internal
+from scanner import scan_project
 
 
 class WelcomeScreen(Screen):
@@ -14,7 +16,11 @@ class WelcomeScreen(Screen):
             Static("DepChex", classes="title"),
             Static("Enter the path to a Python project to scan for dependency confusion risks."),
             Input(placeholder="Path to project (e.g. /home/user/myproject or .)", id="path-input"),
-            Button("Scan", id="scan-btn", variant="primary"),
+            Horizontal(
+                Button("Paste", id="paste-btn"),
+                Button("Scan", id="scan-btn", variant="primary"),
+                id="button-row",
+            ),
             id="welcome-container",
         )
         yield Footer()
@@ -24,16 +30,28 @@ class WelcomeScreen(Screen):
             path = self.query_one("#path-input", Input).value
             if path:
                 self.app.push_screen(ScanningScreen(path))
+        elif event.button.id == "paste-btn":
+            try:
+                text = subprocess.run(
+                    ["wl-paste"], capture_output=True, text=True, timeout=2
+                ).stdout.strip()
+                if text:
+                    self.query_one("#path-input", Input).value = text
+            except (FileNotFoundError, subprocess.TimeoutExpired):
+                pass
+
     def on_input_submitted(self, event: Input.Submitted):
         path = event.value
         if path:
             self.app.push_screen(ScanningScreen(path))
+
 
 class ScanningScreen(Screen):
     def __init__(self, path: str):
         super().__init__()
         self.project_path = path
         self.results: list[Package] = []
+
     def compose(self):
         yield Header()
         yield Vertical(
@@ -42,60 +60,73 @@ class ScanningScreen(Screen):
             RichLog(id="log", highlight=True, markup=True),
         )
         yield Footer()
+
     def on_mount(self):
         self.run_scan()
+
     @work(exclusive=True, thread=True)
     async def run_scan(self):
         log = self.query_one("#log", RichLog)
         progress = self.query_one("#progress", ProgressBar)
-        deps = parse_deps(self.project_path)
-        progress.update(total=len(deps))
-        results = []
-        for i, pkg in enumerate(deps):
-            log.write(f"Checking {pkg.name}...")
-            pkg.pypi_exist = check_pypi(pkg.name)
-            if looks_internal(pkg.name) and pkg.pypi_exist:
-                pkg.risk = Risk.CONFIRMED
-            results.append(pkg)
-            progress.update(progress=i + 1)
-            label = "CONFIRMED" if pkg.risk == Risk.CONFIRMED else "SAFE"
-            log.write(f"  {label}")
-        self.results = results
+
+        def on_progress(pkg, i, total):
+            progress.update(total=total, progress=i + 1)
+            log.write(f"{pkg.name}  →  {pkg.risk.name}")
+
+        self.results = scan_project(self.project_path, progress_callback=on_progress)
         self.app.call_from_thread(
             self.app.push_screen, ResultsScreen(self.results)
         )
+
+
 class ResultsScreen(Screen):
     def __init__(self, results: list[Package]):
         super().__init__()
         self.results = results
+
     def compose(self):
+        confirmed = sum(1 for p in self.results if p.risk == Risk.CONFIRMED)
+        suspicious = sum(1 for p in self.results if p.risk == Risk.SUSPICIOUS)
         yield Header()
         yield Vertical(
-            Static(f"Scan complete — {sum(1 for p in self.results if p.risk == Risk.CONFIRMED)} confirmed risk(s)"),
+            Static(f"Scan complete — {confirmed} confirmed, {suspicious} suspicious, {len(self.results)} total"),
             DataTable(id="results-table"),
         )
         yield Footer()
+
     def on_mount(self):
         table = self.query_one("#results-table", DataTable)
-        table.add_columns("Package", "Source", "On PyPI?", "Risk")
-        confirmed_count = 0
+        table.add_columns("Package", "Source", "Risk", "Releases")
         for pkg in self.results:
-            pypi_str = "Yes" if pkg.pypi_exist else "No"
-            risk_str = pkg.risk.name
-            row = table.add_row(pkg.name, pkg.source_file, pypi_str, risk_str)
+            if pkg.pypi_releases is not None and pkg.pypi_first_release:
+                release_str = f"{pkg.pypi_releases} ({pkg.pypi_first_release[:4]})"
+            elif pkg.pypi_exist is True:
+                release_str = "found"
+            elif pkg.pypi_exist is False:
+                release_str = "—"
+            else:
+                release_str = "?"
+
             if pkg.risk == Risk.CONFIRMED:
-                table.update_cell(row, "Risk", "CONFIRMED")
-                confirmed_count += 1
+                risk_cell = Text("CONFIRMED", style="bold red")
+            elif pkg.risk == Risk.SUSPICIOUS:
+                risk_cell = Text("SUSPICIOUS", style="bold yellow")
+            else:
+                risk_cell = Text("SAFE", style="green")
+
+            table.add_row(pkg.name, pkg.source_file, risk_cell, release_str)
+
+
 class DepChexApp(App):
     def on_ready(self):
         self.push_screen(WelcomeScreen())
+
+
 def main():
     app = DepChexApp()
     app.run()
 
 
-
-
-
 if __name__ == "__main__":
     main()
+
