@@ -29,27 +29,37 @@ pipx install .
 depchex
 ```
 
-Type the path to a Python project (e.g. `.` for the current directory or `/path/to/project`) and click **Scan**. Use the **Paste** button to paste a path from the clipboard (Wayland).
+Type a local path or GitHub URL and click **Scan**:
+- **Local path**: e.g. `.` or `/path/to/project`
+- **GitHub URL**: e.g. `https://github.com/owner/repo`
+
+Use the **Paste** button to paste from the clipboard (Wayland).
 
 ### Command-line usage (no TUI)
 
 ```python
 from depchex.scanner import scan_project
 
+# Local path
 for pkg in scan_project("/path/to/project"):
+    print(f"{pkg.name:30s} {pkg.risk.name}")
+
+# Or GitHub URL (auto-detected)
+for pkg in scan_project("https://github.com/owner/repo"):
     print(f"{pkg.name:30s} {pkg.risk.name}")
 ```
 
 ## How it works
 
-1. **Parses dependencies** from `requirements.txt` and `pyproject.toml`
+1. **Parses dependencies** from `requirements.txt`, `pyproject.toml`, or `setup.cfg` — either from a local path or fetched remotely from a GitHub URL
 2. **Queries the PyPI JSON API** for each package to determine whether it exists publicly
 3. **Classifies each package** based on its existence and release history on PyPI
 
 ## Limitations
 
 - The 3-release threshold is a heuristic — it may produce false positives or negatives in edge cases
-- Network-dependent (requires access to `pypi.org`)
+- Network-dependent (requires access to `pypi.org` and optionally `api.github.com` for branch detection)
+- GitHub scanning fetches only `requirements.txt`, `pyproject.toml`, and `setup.cfg` from the repo root — nested dependency files are not retrieved
 - Does not detect typosquatting, dependency hijacking, or other supply chain attacks
 
 ## License
