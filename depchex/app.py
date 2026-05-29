@@ -5,8 +5,8 @@ from textual.containers import Vertical, Horizontal
 from textual import work
 from rich.text import Text
 import subprocess
-from models import Package, Risk
-from scanner import scan_project
+from .models import Package, Risk
+from .scanner import scan_project
 
 
 class WelcomeScreen(Screen):

@@ -21,13 +21,13 @@ git clone https://github.com/NobiBot/DepChex.git
 cd DepChex
 python -m venv .venv
 source .venv/bin/activate
-pip install httpx textual
+pip install -e .
 ```
 
 ## Usage
 
 ```bash
-.venv/bin/python app.py
+dpchex
 ```
 
 Type the path to a Python project (e.g. `.` for the current directory or `/path/to/project`) and click **Scan**. Use the **Paste** button to paste a path from the clipboard (Wayland).
@@ -35,7 +35,7 @@ Type the path to a Python project (e.g. `.` for the current directory or `/path/
 ### Command-line usage (no TUI)
 
 ```python
-from scanner import scan_project
+from depchex.scanner import scan_project
 
 for pkg in scan_project("/path/to/project"):
     print(f"{pkg.name:30s} {pkg.risk.name}")

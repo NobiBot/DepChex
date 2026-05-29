@@ -1,6 +1,6 @@
 import re
 from pathlib import Path
-from models import Package, Risk
+from .models import Package, Risk
 import httpx
 
 _NAME_RE = re.compile(r"^([A-Za-z0-9][A-Za-z0-9_.-]*)")
