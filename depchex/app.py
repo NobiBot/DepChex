@@ -6,7 +6,7 @@ from textual import work
 from rich.text import Text
 import subprocess
 from .models import Package, Risk
-from .scanner import scan_project
+from .scanner import scan_project, is_github_url, parse_github_url
 
 
 class WelcomeScreen(Screen):
@@ -14,8 +14,8 @@ class WelcomeScreen(Screen):
         yield Header()
         yield Vertical(
             Static("DepChex", classes="title"),
-            Static("Enter the path to a Python project to scan for dependency confusion risks."),
-            Input(placeholder="Path to project (e.g. /home/user/myproject or .)", id="path-input"),
+            Static("Enter a local path or GitHub URL to scan for dependency confusion risks."),
+            Input(placeholder="Path or GitHub URL (e.g. /home/user/project or https://github.com/owner/repo)", id="path-input"),
             Horizontal(
                 Button("Paste", id="paste-btn"),
                 Button("Scan", id="scan-btn", variant="primary"),
@@ -52,10 +52,16 @@ class ScanningScreen(Screen):
         self.project_path = path
         self.results: list[Package] = []
 
+    def _display_name(self) -> str:
+        if is_github_url(self.project_path):
+            owner, repo = parse_github_url(self.project_path)
+            return f"{owner}/{repo}"
+        return self.project_path
+
     def compose(self):
         yield Header()
         yield Vertical(
-            Static(f"Scanning: {self.project_path}"),
+            Static(f"Scanning: {self._display_name()}"),
             ProgressBar(total=100, id="progress", show_eta=False),
             RichLog(id="log", highlight=True, markup=True),
         )
