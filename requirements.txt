@@ -1,4 +1,0 @@
-flask==2.0.1
-requests
-acme-internal-tool
-myco_api
