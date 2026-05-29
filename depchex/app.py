@@ -97,6 +97,10 @@ class ResultsScreen(Screen):
         yield Vertical(
             Static(f"Scan complete — {confirmed} confirmed, {suspicious} suspicious, {len(self.results)} total"),
             DataTable(id="results-table"),
+            Horizontal(
+                Button("New Scan", id="new-scan-btn", variant="primary"),
+                id="button-row",
+            ),
         )
         yield Footer()
 
@@ -121,6 +125,11 @@ class ResultsScreen(Screen):
                 risk_cell = Text("SAFE", style="green")
 
             table.add_row(pkg.name, pkg.source_file, risk_cell, release_str)
+
+    def on_button_pressed(self, event: Button.Pressed):
+        if event.button.id == "new-scan-btn":
+            self.app.pop_screen()
+            self.app.pop_screen()
 
 
 class DepChexApp(App):
