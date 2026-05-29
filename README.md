@@ -19,15 +19,14 @@ Dependency confusion is a supply chain attack where an attacker uploads a malici
 ```bash
 git clone https://github.com/NobiBot/DepChex.git
 cd DepChex
-python -m venv .venv
-source .venv/bin/activate
-pip install -e .
+pip install pipx
+pipx install .
 ```
 
 ## Usage
 
 ```bash
-dpchex
+depchex
 ```
 
 Type the path to a Python project (e.g. `.` for the current directory or `/path/to/project`) and click **Scan**. Use the **Paste** button to paste a path from the clipboard (Wayland).

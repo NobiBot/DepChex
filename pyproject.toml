@@ -10,4 +10,4 @@ requires-python = ">=3.10"
 dependencies = ["httpx", "textual"]
 
 [project.scripts]
-dpchex = "depchex.app:main"
+depchex = "depchex.app:main"
