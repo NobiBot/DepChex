@@ -35,6 +35,22 @@ Type a local path or GitHub URL and click **Scan**:
 
 Use the **Paste** button to paste from the clipboard (Wayland).
 
+### Test Repo
+
+Try it on this purpose-built test repo:
+
+```bash
+depchex
+# then enter: https://github.com/NobiBot/depchex-test-target
+```
+
+Expected classification:
+
+| Package | Risk |
+|---|---|
+| `flask`, `requests`, `django`, `fastapi`, `sqlalchemy`, `httpx`, `pytest`, `numpy`, `alembic`, `click`, `gunicorn`, `celery`, `redis`, `jinja2`, `werkzeug`, `pillow`, `psycopg2-binary` | **SAFE** (green) — real PyPI packages with 3+ releases |
+| `acme-internal-auth`, `myco-secret-sauce`, `private-telemetry-lib`, `company-internal-logging`, `org-analytics-client` | **CONFIRMED** (red) — fictional private packages not on PyPI |
+
 ### Command-line usage (no TUI)
 
 ```python
